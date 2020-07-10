@@ -5,7 +5,17 @@
 -include("gps1.hrl").
 
 gps1(Goals, State, Ops) ->
-    gps1(Goals, State, Ops, []).
+    case gps1(Goals, State, Ops, []) of
+	{true, FinalState, Actions} ->
+	    case sets:is_subset(sets:from_list(Goals), FinalState) of
+		true ->
+		    {true, FinalState, Actions};
+		false ->
+		    {false, State, []}
+	    end;
+	{false, _, _} ->
+	    {false, State, []}
+    end.
 
 -spec gps1([goal()], state(), [op()], [action()]) ->
 	  {boolean(), state(), [action()]}.
@@ -112,8 +122,15 @@ gps1_test() ->
 	   #operator{action=give_shop_money,
 		     pre_conds=sets:from_list([have_money]),
 		     adds=sets:from_list([shop_has_money]),
-		     dels=sets:from_list([have_money])}
+		     dels=sets:from_list([have_money])},
+	   %% 	   (push (make-op :action 'ask-phone-number
+	   %%   :preconds '(in-communication-with-shop)
+	   %%   :add-list '(know-phone-number))
+	   %% *school-ops*)
+	   #operator{action=ask_phone_number,
+		     pre_conds=sets:from_list([in_communication_with_shop]),
+		     adds=sets:from_list([know_phone_number])}
 	  ],
-    State1 = sets:from_list([son_at_home, car_needs_battery, have_money, have_phone_book]),
+    State1 = sets:from_list([son_at_home, car_needs_battery, have_money]),
     Goal1 = [son_at_school],
-    {true, _, _} = gps1(Goal1, State1, Ops).
+    gps1(Goal1, State1, Ops).
