@@ -1,6 +1,8 @@
 -module(gps).
 
--export([gps/3, create_op/4, create_school_ops/0]).
+-export([gps/3,
+	 create_op/4,
+	 create_school_ops/0, create_banana_ops/0]).
 
 %% Goal is just an atom in Erlang
 
@@ -215,4 +217,64 @@ create_school_ops() ->
 	       [have_money],
 	       [shop_has_money],
 	       [have_money])
+    ].
+
+%% (defparameter *banana_ops*
+%%   (list
+%%     (op
+%%       'climb_on_chair
+%%       :preconds '(chair_at_middle_room at_middle_room on_floor)
+%%       :add_list '(at_bananas on_chair)
+%%       :del_list '(at_middle_room on_floor))
+%%     (op 
+%%       'push_chair_from_door_to_middle_room
+%%       :preconds '(chair_at_door at_door)
+%%       :add_list '(chair_at_middle_room at_middle_room)
+%%       :del_list '(chair_at_door at_door))
+%%     (op 
+%%       'walk_from_door_to_middle_room
+%%       :preconds '(at_door on_floor)
+%%       :add_list '(at_middle_room)
+%%       :del_list '(at_door))
+%%     (op 
+%%       'grasp_bananas
+%%       :preconds '(at_bananas empty_handed)
+%%       :add_list '(has_bananas)
+%%       :del_list '(empty_handed))
+%%     (op 
+%%       'drop_ball
+%%       :preconds '(has_ball)
+%%       :add_list '(empty_handed)
+%%       :del_list '(has_ball))
+%%     (op 
+%%       'eat_bananas
+%%       :preconds '(has_bananas)
+%%       :add_list '(empty_handed not_hungry)
+%%       :del_list '(has_bananas hungry))))
+create_banana_ops() ->
+    [
+     create_op(climb_on_chair,
+	       [chair_at_middle_room, at_middle_room, on_floor],
+	       [at_bananas, on_chair],
+	       [at_middle_room, on_floor]),
+     create_op(push_chair_from_door_to_middle_room,
+	       [chair_at_door, at_door],
+	       [chair_at_middle_room, at_middle_room],
+	       [chair_at_door, at_door]),	 
+     create_op(walk_from_door_to_middle_room,
+	       [at_door, on_floor],
+	       [at_middle_room],
+	       [at_door]),
+     create_op(grasp_bananas,
+	       [at_bananas, empty_handed],
+	       [has_bananas],
+	       [empty_handed]),
+     create_op(drop_ball,
+	       [has_ball],
+	       [empty_handed],
+	       [has_ball]),
+     create_op(eat_bananas,
+	       [has_bananas],
+	       [empty_handed, not_hungry],
+	       [has_bananas, hungry])
     ].
