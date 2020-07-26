@@ -8,6 +8,6 @@
 			| segment_var().
 -type pattern() :: [ground_pattern()].
 
--type key() :: var().
+-type key() :: varname().
 -type val() :: [atom()].
 -type bindings() :: [{key(), val()}].

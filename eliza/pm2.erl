@@ -29,9 +29,9 @@ pattern_match([P|Ps], [I|Is], B) when is_atom(P), is_atom(I) ->
 -spec handle_simple_var(simple_var(), pattern(), [atom()], bindings()) -> {boolean(), bindings()}.
 handle_simple_var(_Var, _Pt, [], _B) -> {false, []}; %% Var at least represent one atom
 handle_simple_var(Var, Pt, [I|Is], B) ->
-    case bindings:lookup(B, Var) of
+    case bindings:lookup(B, var_name(Var)) of
 	not_found ->
-	    NB = bindings:extend(B, Var, [I]),
+	    NB = bindings:extend(B, var_name(Var), [I]),
 	    pattern_match(Pt, Is, NB);
 	{ok, I} ->
     	    pattern_match(Pt, Is, B);
@@ -41,11 +41,11 @@ handle_simple_var(Var, Pt, [I|Is], B) ->
 
 -spec handle_segment_var(segment_var(), pattern(), [atom()], bindings()) -> {boolean(), bindings()}.
 handle_segment_var(Segvar, Pt, Input, B) ->
-    case bindings:lookup(B, Segvar) of
+    case bindings:lookup(B, var_name(Segvar)) of
 	not_found ->
 	    case Pt of
 		[] ->
-		    {true, bindings:extend(B, Segvar, Input)};
+		    {true, bindings:extend(B, var_name(Segvar), Input)};
 		[P|Ps] when is_atom(P) ->
 		    handle_segment_var(Segvar, P, Ps, Input, B, 0);
 		_ ->
@@ -73,9 +73,9 @@ handle_segment_var(Segvar, P, Pt, Input, B, StartPos) ->
 		{false, []} ->
 		    handle_segment_var(Segvar, P, Pt, Input, B, Pos);
 		{true, NB} ->
-		    case bindings:lookup(NB, Segvar) of
+		    case bindings:lookup(NB, var_name(Segvar)) of
 			not_found ->
-			    NNB = bindings:extend(NB, Segvar, H),
+			    NNB = bindings:extend(NB, var_name(Segvar), H),
 			    {true, NNB};
 			{ok, H} ->
 			    {true, NB};
@@ -129,7 +129,7 @@ sublis(Pt, B) ->
 			      true ->
 				  [P];
 			      false ->
-				  case bindings:lookup(B, P) of
+				  case bindings:lookup(B, var_name(P)) of
 				      not_found ->
 					  erlang:error({variable_not_found, P});
 				      {ok, Val} ->
@@ -139,6 +139,9 @@ sublis(Pt, B) ->
 		  end,
 		  Pt).
 
+-spec var_name(var()) -> varname().
+var_name(Var) ->
+    element(2, Var).
 
 %% UnitTest
 pm2_test() ->
@@ -146,7 +149,7 @@ pm2_test() ->
     %% ((?X 1 2 A B))
     Pt1 = parse("?*x a b ?*x"),
     In1 = parse("1 2 a b a b 1 2 a b"),
-    {true,[{{segvar,x},['1','2',a,b]}]} = pattern_match(Pt1, In1),
+    {true,[{x,['1','2',a,b]}]} = pattern_match(Pt1, In1),
     %% > (pat-match '((?* ?p) need (?* ?x))
     %%    '(Mr Hulot and I need a vacation))
     %% ((?P MR HULOT AND I) (?X A VACATION))
@@ -154,15 +157,15 @@ pm2_test() ->
     %% ((?X WHAT HE IS) (?Y FOOL))
     Pt2 = parse("?*p need ?*x"),
     In2 = parse("Mr Hulot and I need a vacation"),
-    {true,[{{segvar,p},['Mr','Hulot','and','I']},
-	   {{segvar,x},[a,vacation]}]} = pattern_match(Pt2, In2),
+    {true,[{p, ['Mr','Hulot','and','I']},
+	   {x, [a,vacation]}]} = pattern_match(Pt2, In2),
     Pt3 = parse("?*x is a ?*y"),
     In3 = parse("what he is is a fool"),
-    {true,[{{segvar,x},[what,he,is]},{{segvar,y},[fool]}]} = pattern_match(Pt3,
+    {true,[{x, [what,he,is]},{y, [fool]}]} = pattern_match(Pt3,
 									   In3),
     %% ?*x should match empty.
     Pt4 = parse("?*x I want to ?*y"),
     In4 = parse("I want to have a vocation"),
-    {true,[{{segvar,x},[]},{{segvar,y},[have,a,vocation]}]} = pattern_match(Pt4, In4),
+    {true,[{x,[]},{y,[have,a,vocation]}]} = pattern_match(Pt4, In4),
     {true, B} = pattern_match(Pt4, In4),
     ['I',want,to,have,a,vocation] = sublis(Pt4, B).
