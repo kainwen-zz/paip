@@ -6,6 +6,7 @@ D = [0-9]
 Rules.
 
 [+\-*/]                  : {token, {list_to_atom(TokenChars), TokenLine}}.
+\^                       : {token, {list_to_atom(TokenChars), TokenLine}}.
 [()]                     : {token, {list_to_atom(TokenChars), TokenLine}}.
 
 
