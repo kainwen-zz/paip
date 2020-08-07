@@ -2,6 +2,12 @@
 
 -export([scan_and_parse/1, scan_and_parse_file/1]).
 
+-type exp() :: {integer, integer()}
+	     | {symbol, atom()}
+	     | {binop_exp, atom(), exp(), exp()}
+	     | {negation_exp, exp()}
+	     | {exp_term, exp()}.
+
 scan_and_parse_file(Fn) ->
     {ok, Data} = file:read_file(Fn),
     Code = binary_to_list(Data),
