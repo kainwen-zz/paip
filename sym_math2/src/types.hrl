@@ -1,4 +1,4 @@
--type exp() :: {integer, integer()}
+-type exp() :: {number, number()}
 	     | {symbol, atom()}
 	     | {binop_exp,
 		OP::atom(),

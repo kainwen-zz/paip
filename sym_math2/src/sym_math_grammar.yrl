@@ -1,6 +1,6 @@
 Nonterminals expr binop term.
 
-Terminals '+' '-' '*' '/' '~' '(' ')' '{' '}' '^' ',' integer symbol diff int log sin cos exp.
+Terminals '+' '-' '*' '/' '~' '(' ')' '{' '}' '^' ',' number symbol diff int log sin cos exp.
 
 Rootsymbol expr.
 
@@ -22,36 +22,36 @@ expr ->
     expr '-' term :
     {binop_exp, '-', '$1', '$3'}.
 
-expr ->
+term ->
     diff '{' expr ',' symbol '}' :
     {symbol, _, S} = '$5',
     {diff_exp, '$3', {symbol, S}}.
 
-expr ->
+term ->
     int '{' expr ',' symbol '}' :
     {symbol, _, S} = '$5',
     {int_exp, '$3', {symbol, S}}.
 
-expr ->
+term ->
     log '{' expr '}' :
     {log_exp, '$3'}.
 
-expr ->
+term ->
     exp '{' expr '}' :
     {exp_exp, '$3'}.
 
-expr ->
+term ->
     sin '{' expr '}' :
     {sin_exp, '$3'}.
 
-expr ->
+term ->
     cos '{' expr '}' :
     {cos_exp, '$3'}.
 
 term ->
-    integer :
-    {integer, _, Int} = '$1',
-    {integer, Int}.
+    number :
+    {number, _, N} = '$1',
+    {number, N}.
 
 term ->
     symbol :
