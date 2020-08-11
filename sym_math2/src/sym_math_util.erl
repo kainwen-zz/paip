@@ -2,7 +2,7 @@
 
 -include("types.hrl").
 
--export([is_just_simple_arith/1, eval/1]).
+-export([is_just_simple_arith/1, eval/1, contain_symbol/2]).
 
 -spec is_just_simple_arith(exp()) -> boolean().
 is_just_simple_arith({number, _}) -> true;
@@ -60,15 +60,37 @@ fetch_func(Tag) ->
     {Tag, Func} = lists:keyfind(Tag, 1, FuncLib),
     Func.
 
+contain_symbol({number, _}, {symbol, _S}) -> false;
+contain_symbol({symbol, S}, {symbol, S}) -> true;
+contain_symbol({binop_exp, _Op, A1, A2}, {symbol, S}) -> 
+    contain_symbol(A1, {symbol, S}) orelse contain_symbol(A2, {symbol, S});
+contain_symbol({Tag, E}, {symbol, S}) when Tag =:= negative_exp;
+					   Tag =:= log_exp;
+					   Tag =:= exp_exp;
+					   Tag =:= sin_exp;
+					   Tag =:= cos_exp ->
+    contain_symbol(E, {symbol, S});
+contain_symbol(_, _) -> false.
+
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
 eval_test() ->
     ExpAns = [
 	      {"3*2+2*3", {number, 12}},
-	      {"3*(2+2)*3", {number, 24}},
+	      {"3*(2+2)*3", {number, 36}},
 	      {"3+5^2", {number,28.0}},
 	      {"log{2.718}", {number,0.999896315728952}},
 	      {"log{exp{1}}", {number,1.0}}
-	     ].    
+	     ],
+    ok = lists:foreach(fun ({E, A}) ->
+			       ?assert(
+				  sym_math_util:eval(sym_math_parse:scan_and_parse(E)) =:= A
+				 )
+		       end,
+		       ExpAns).
+
+contain_symbol_test() ->
+    ?assertNot(contain_symbol({symbol, a}, {symbol, b})).
+
 -endif.

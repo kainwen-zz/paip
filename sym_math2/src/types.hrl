@@ -12,3 +12,11 @@
 	     | {exp_exp, exp()}
 	     | {sin_exp, exp()}
 	     | {cos_exp, exp()}.
+
+-type rule() :: {Pattern::exp(),
+		 Response::exp(),
+		 Guard::string()}.
+
+-type key() :: atom().
+-type value() :: exp().
+-type bindings() :: [{key(), value()}].
