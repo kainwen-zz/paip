@@ -26,12 +26,12 @@ parse_test() ->
 		 {number,3}}),
 
     ?assert(sym_math_parse:scan_and_parse("~3*x") =:=
-		{negative_exp,{binop_exp,'*',{number,3},{symbol,x}}}),
+		{binop_exp,'*',{number,-3},{symbol,x}}),
     
     ?assert(sym_math_parse:scan_and_parse("3+5^~2") =:= 
 		{binop_exp,'+',
 		 {number,3},
-		 {binop_exp,'^',{number,5},{negative_exp,{number,2}}}}),
+		 {binop_exp,'^',{number,5},{number,-2}}}),
     
     ?assert(sym_math_parse:scan_and_parse("2 + 2") =:=
 		{binop_exp,'+',{number,2},{number,2}}),
@@ -133,7 +133,7 @@ parse_test() ->
 		 {log_exp,{symbol,x}}}),
     
     ?assert(sym_math_parse:scan_and_parse("x ^ cos {pi}") =:=
-		{binop_exp,'^',{symbol,x},{cos_exp,{symbol,pi}}}),
+		{binop_exp,'^',{symbol,x},{cos_exp,{const,pi}}}),
     
     ?assert(sym_math_parse:scan_and_parse("diff{3*x+cos{x}/x, x}") =:=
 		{diff_exp,{binop_exp,'+',
@@ -201,7 +201,7 @@ parse_test() ->
 			  {binop_exp,'+',
 			   {binop_exp,'*',{number,3},{symbol,x}},
 			   {number,2}},
-			  {negative_exp,{binop_exp,'/',{number,2},{number,3}}}},
+			  {binop_exp,'/',{number,-2},{number,3}}},
 		 {symbol,x}}),
     
     ?assert(sym_math_parse:scan_and_parse("int{sin{x}/(1+cos{x}), x}") =:=
@@ -234,5 +234,7 @@ parse_test() ->
 			   {number,3}}},
 		 {symbol,x}}),
     
-    ?assert(sym_math_parse:scan_and_parse("log{2.718}") =:= {log_exp,{number,2.718}}).
+    ?assert(sym_math_parse:scan_and_parse("log{2.718}") =:= {log_exp,{number,2.718}}),
+    ?assert(sym_math_parse:scan_and_parse("sin{pi}") =:= {sin_exp, {const, pi}}).
+
 -endif.

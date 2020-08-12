@@ -17,6 +17,7 @@ pm(Pattern, Guard, Exp) ->
 -spec pattern_match(Pattern::exp(),
 		    Exp::exp(), Bindings::bindings()) -> pm_result().
 pattern_match({number, N}, {number, N}, B) -> {ok, B};
+pattern_match({const, pi}, {const, pi}, B) -> {ok, B};
 pattern_match({symbol, S}, Exp, B) ->
     case lists:keysearch(S, 1, B) of
 	false ->
@@ -36,28 +37,14 @@ pattern_match({binop_exp, Op, PtE1, PtE2}, {binop_exp, Op, E1, E2}, B) ->
     end;
 pattern_match({negative_exp, PtE}, {negative_exp, E}, B) ->
     pm_helper(PtE, E, B);
-pattern_match({Tag, PtE, {symbol, S1}},
-	      {Tag, E, {symbol, S2}}, B) when Tag =:= diff_exp;
+pattern_match({Tag, PtE, S1},
+	      {Tag, E, S2}, B) when Tag =:= diff_exp;
 					      Tag =:= int_exp ->
     case pm_helper(PtE, E, B) of
 	fail ->
 	    fail;
 	{ok, NB} ->
-	    C1 = sym_math_util:contain_symbol(PtE, {symbol, S1}),
-	    C2 = sym_math_util:contain_symbol(E, {symbol, S2}),
-	    case {C1, C2} of
-		{true, true} ->
-		    case lists:keysearch(S1, 1, NB) of
-			{value, {S1, {symbol, S2}}} ->
-			    {ok, NB};
-			_ ->
-			    fail
-		    end;
-		{false, false} ->
-		    {ok, NB};
-		_ ->
-		    fail
-	    end
+	    pm_helper(S1, S2, NB)
     end;
 pattern_match({Tag, PtE}, {Tag, E}, B) when Tag =:= log_exp;
 					    Tag =:= exp_exp;
@@ -82,7 +69,7 @@ check_guard(Gd, Bindings) ->
 	  || {Key, Val} <- Bindings],
     {ok, Tokens, _} = erl_scan:string(Gd),
     {ok, Es} = erl_parse:parse_exprs(Tokens),
-    {value, V, _} = erl_eval:exprs(Es, NB),
+    {value, V, _} = erl_eval:exprs(Es, orddict:from_list(NB)),
     case V of
 	true ->
 	    {ok, Bindings};

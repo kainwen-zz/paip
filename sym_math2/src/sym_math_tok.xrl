@@ -7,7 +7,13 @@ Rules.
 
 [+\-*/]                  : {token, {list_to_atom(TokenChars), TokenLine}}.
 \^                       : {token, {list_to_atom(TokenChars), TokenLine}}.
-[~(,){}.]                : {token, {list_to_atom(TokenChars), TokenLine}}.
+[(,){}.]                 : {token, {list_to_atom(TokenChars), TokenLine}}.
+~{D}                     : {token, {number, TokenLine, parse_neg(TokenChars)}}.
+~[1-9]{D}*               : {token, {number, TokenLine, parse_neg(TokenChars)}}.
+~{D}+[.]{D}+             : {token, {number, TokenLine, parse_neg(TokenChars)}}.
+pi                       : {token, {const, TokenLine, pi}}.
+
+~                        : {token, {list_to_atom(TokenChars), TokenLine}}.
 
 diff                     : {token, {list_to_atom(TokenChars), TokenLine}}.
 int                      : {token, {list_to_atom(TokenChars), TokenLine}}.
@@ -27,3 +33,6 @@ exp                      : {token, {list_to_atom(TokenChars), TokenLine}}.
 \s                       : skip_token.
 
 Erlang code.
+
+parse_neg([$~|TokenChars]) ->
+    -list_to_integer(TokenChars).

@@ -2,7 +2,8 @@
 
 -include("types.hrl").
 
--export([parse/1, load_rule_from_file/1, check_and_apply_rule/2]).
+-export([parse/1, load_rule_from_file/1,
+	 check_and_apply_rule/2, pick_one_rule_and_apply/2]).
 
 -spec parse(string()) -> rule().
 parse(S) ->
@@ -26,8 +27,19 @@ load_rule_from_file(Fn) ->
      || Line <- string:split(Code, "\n", all),
 	length(string:strip(Line, both)) > 0].
 
-%% Match A rule to an Exp
 -type check_apply_rule_result() :: fail | {ok, exp()}.
+-spec pick_one_rule_and_apply(exp(), [rule()]) -> check_apply_rule_result().
+pick_one_rule_and_apply(_Exp, []) -> fail;
+pick_one_rule_and_apply(Exp, [Rule|Rules]) -> 
+    case check_and_apply_rule(Rule, Exp) of
+	fail ->
+	    pick_one_rule_and_apply(Exp, Rules);
+	E ->
+	    E
+    end.
+
+%% Match A rule to an Exp
+
 -spec check_and_apply_rule(rule(), exp()) -> check_apply_rule_result().
 check_and_apply_rule({Pattern, Response, Guard}, Exp) ->
     case sym_math_pm:pm(Pattern, Guard, Exp) of
@@ -39,6 +51,7 @@ check_and_apply_rule({Pattern, Response, Guard}, Exp) ->
 
 -spec apply_rule(exp(), bindings()) -> exp().
 apply_rule(N={number, _}, _B) -> N;
+apply_rule(C={const, _}, _B) -> C;
 apply_rule(Sym={symbol, S}, B) ->
     case lists:keysearch(S, 1, B) of
 	false ->

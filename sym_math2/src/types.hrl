@@ -1,4 +1,5 @@
--type exp() :: {number, number()}
+-type exp() :: {const, pi} 
+	     | {number, number()}
 	     | {symbol, atom()}
 	     | {binop_exp,
 		OP::atom(),
@@ -6,8 +7,8 @@
 		Arg2::exp()}
 	     | {negative_exp,
 		exp()}
-	     | {diff_exp, exp(), {symbol, atom()}}
-	     | {int_exp, exp(), {symbol, atom()}}
+	     | {diff_exp, exp(), exp()}
+	     | {int_exp, exp(), exp()}
 	     | {log_exp, exp()}
 	     | {exp_exp, exp()}
 	     | {sin_exp, exp()}
