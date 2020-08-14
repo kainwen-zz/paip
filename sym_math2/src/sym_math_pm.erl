@@ -4,12 +4,21 @@
 
 -export([pm/3, check_guard/2]).
 
--type pm_result() :: fail | {ok, bindings()}.
+-type pm_result() :: fail
+		   | {ok, bindings()}
+		   | {partok, bindings(), {number, number()}}.
 -spec pm(Pattern::exp(), Guard::string(), Exp::exp()) -> pm_result().
 pm(Pattern, Guard, Exp) ->    
     case pattern_match(Pattern, Exp, []) of
 	{ok, B} ->
 	    check_guard(Guard, B);
+	{partok, B, AA} ->
+	    case check_guard(Guard, B) of
+		fail ->
+		    fail;
+		_ ->
+		    {partok, B, AA}
+	    end;
 	fail ->
 	    fail
     end.
@@ -38,13 +47,35 @@ pattern_match({binop_exp, Op, PtE1, PtE2}, {binop_exp, Op, E1, E2}, B) ->
 pattern_match({negative_exp, PtE}, {negative_exp, E}, B) ->
     pm_helper(PtE, E, B);
 pattern_match({Tag, PtE, S1},
-	      {Tag, E, S2}, B) when Tag =:= diff_exp;
-					      Tag =:= int_exp ->
+	      {Tag, E, S2}, B) when Tag =:= diff_exp ->
     case pm_helper(PtE, E, B) of
 	fail ->
 	    fail;
 	{ok, NB} ->
 	    pm_helper(S1, S2, NB)
+    end;
+pattern_match({Tag, PtE, S1}, {Tag, E, S2}, B) when Tag =:= int_exp ->
+    case pm_helper(PtE, E, B) of
+	fail ->
+	    fail;
+	{ok, NB} ->
+	    case pm_helper(S1, S2, NB) of
+		{ok, NNB} ->
+		    {ok, NNB};
+		fail ->
+		    case S1 of
+			{symbol, U} ->
+			    {value, {U, BE}} = lists:keysearch(U, 1, NB),
+			    case sym_math_util:linear(BE, S2) of
+				fail ->
+				    fail;
+				{ok, AA} ->
+				    {partok, NB, AA}
+			    end;
+			_ ->
+			    fail
+		    end
+	    end
     end;
 pattern_match({Tag, PtE}, {Tag, E}, B) when Tag =:= log_exp;
 					    Tag =:= exp_exp;

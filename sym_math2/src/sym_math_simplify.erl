@@ -10,8 +10,8 @@ simplify(Code) ->
 	      filename:join(filename:dirname(?FILE), "rules")),
     simplify(Exp, Rules).
     
-%% simplify(Exp={int_exp, _, _}, Rules) ->
-%%     handle_int_exp(Exp, Rules);
+simplify(Exp={int_exp, _, _}, Rules) ->
+    handle_int_exp(Exp, Rules);
 simplify(Exp={diff_exp, _, _}, Rules) ->
     handle_diff_exp(Exp, Rules);
 simplify(N={number, _}, _Rules) -> N;
@@ -46,6 +46,55 @@ simp_helper(SE, Rules) ->
 handle_diff_exp({diff_exp, E, S}, Rules) ->
     SE = {diff_exp, simplify(E, Rules), simplify(S, Rules)},
     simp_helper(SE, Rules).
+
+handle_int_exp({int_exp, E, S}, Rules) ->
+    NE = simplify(E, Rules),
+    NS = simplify(S, Rules),
+    NEXP = {int_exp, NE, NS},
+    case simp_helper(NEXP, Rules) of
+	NEXP ->
+	    %% No progress
+	    %%Step 1: try to factor
+	    Factors = [EE || EE<- factorize(NE), EE /= {number, 1}],
+	    case length(Factors) of
+		1 ->
+		    NEXP;
+		_N ->
+		    try_factor(NEXP, Factors, 1, Rules)
+	    end;
+	Result ->
+	    Result
+    end.
+
+try_factor(NEXP, Factors, I, _Rules) when I > length(Factors) -> NEXP;
+try_factor(NEXP={int_exp, _, S}, Factors, I, Rules) ->
+    Factor = lists:nth(I, Factors),
+    E = {int_exp, Factor, S},
+    NE = simplify(E, Rules),
+    case sym_math_util:contain_intexp(NE) of
+	true ->
+	    try_factor(NEXP, Factors, I+1, Rules);
+	false ->
+	    NFs = lists:sublist(Factors, 1, I-1) ++
+		lists:sublist(Factors, I+1, length(Factors) - I),
+	    E1 = lists:foldl(fun (Ele, Acc) ->
+				     {binop_exp, '*', Acc, Ele}
+			     end, {number, 1}, NFs),
+	    EXP = {int_exp, E1, NE},
+	    case simplify(EXP, Rules) of
+		EXP ->
+		    try_factor(NEXP, Factors, I+1, Rules);
+		Result ->
+		    Result
+	    end
+    end.
+
+factorize({binop_exp, '*', E1, E2}) ->
+    factorize(E1) ++ factorize(E2);
+factorize({binop_exp, '/', E1, E2}) ->
+    factorize(E1) ++
+	[{binop_exp, '/', {number, 1}, Exp} || Exp <- factorize(E2)];
+factorize(E) ->[E].
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
@@ -124,9 +173,63 @@ simplify_test() ->
 				 {number,7}}},
 	      
 	      {"diff{x*x, x^2}", {number, 1}},
-	      {"diff{x^2, a}", {number, 0}}
+	      {"diff{x^2, a}", {number, 0}},
+	      
+	      {"int{3*x^3-1/(3*x^3), x}",
+	       {binop_exp,'-',
+		{binop_exp,'*',
+		 {number,0.75},
+		 {binop_exp,'^',{symbol,x},{number,4}}},
+		{binop_exp,'/',
+		 {binop_exp,'/',
+		  {binop_exp,'^',{symbol,x},{number,-2}},
+		  {number,-2}},
+		 {number,3}}}},
+
+	      {"int{x*sin{x^2}, x}", {binop_exp,'*',
+				      {number,0.5},
+				      {negative_exp,{cos_exp,{binop_exp,'^',
+							      {symbol,x},
+							      {number,2}}}}}},
+
+	      {"int{(3*x+2)^(~2/3), x}", 
+	       {binop_exp,'*',
+		{number,0.9999999999999999},
+		{binop_exp,'^',
+		 {binop_exp,'+',
+		  {binop_exp,'*',{number,3},{symbol,x}},
+		  {number,2}},
+		 {number,0.33333333333333337}}}},
+
+	      {"int{sin{x}^2*cos{x},x}",
+	       {binop_exp,'/',
+		{binop_exp,'^',{sin_exp,{symbol,x}},{number,3}},
+		{number,3}}},
+
+	      %Int sin(x) / (1 + cos(x)) d x
+	      {"int{sin{x}/(1+cos{x}), x}",
+	       {negative_exp,{log_exp,{binop_exp,'+',
+				       {cos_exp,{symbol,x}},
+				       {number,1}}}}},
+
+	      {"int{8*x^2/(x^3+2)^3, x}",
+	       {binop_exp,'*',
+		{number,-1.3333333333333333},
+		{binop_exp,'^',
+		 {binop_exp,'+',
+		  {binop_exp,'^',{symbol,x},{number,3}},
+		  {number,2}},
+		 {number,-2}}}},
+
+	      {"int{(2*x+1)/(x^2+x-1), x}",
+	       {log_exp,{binop_exp,'-',
+			 {binop_exp,'+',
+			  {binop_exp,'^',{symbol,x},{number,2}},
+			  {symbol,x}},
+			 {number,1}}}}
 	     ],
     lists:foreach(fun ({E, A}) ->
+			  io:format("~p~n", [{E, A}]),
 			  ?assert(simplify(E) =:= A)
 		  end,
 		  ExpAns).

@@ -2,7 +2,7 @@
 
 -include("types.hrl").
 
--export([is_just_simple_arith/1, eval/1, contain/2]).
+-export([is_just_simple_arith/1, eval/1, contain/2, contain_intexp/1, linear/2]).
 
 -spec is_just_simple_arith(exp()) -> boolean().
 is_just_simple_arith({const, _}) -> true;
@@ -20,13 +20,13 @@ is_just_simple_arith({ExpTag, E}) when ExpTag =:= log_exp;
 				       ExpTag =:= cos_exp ->
     is_just_simple_arith(E).
 
--spec eval(exp()) -> {number, number()}.
+-spec eval(exp()) -> fail | {number, number()}.
 eval(Exp) ->
     case is_just_simple_arith(Exp) of
 	true ->
 	    eval_internal(Exp);
 	false ->
-	    erlang:error({"cannot eval exp containing symbol", Exp})
+	    fail
     end.
 
 eval_internal({const, pi}) -> {number, 3.1415926};
@@ -76,6 +76,21 @@ contain({Tag, E1}, E) when Tag =:= negative_exp;
     contain(E1, E);
 contain(_, _) -> false.
 
+contain_intexp({Tag, _}) when Tag =:= number;
+			      Tag =:= symbol;
+			      Tag =:= const ->
+    false;
+contain_intexp({binop_exp, _, E1, E2}) ->
+    lists:any(fun contain_intexp/1, [E1, E2]);
+contain_intexp({int_exp, _, _}) -> true;
+contain_intexp({diff_exp, E1, E2}) ->
+    lists:any(fun contain_intexp/1, [E1, E2]);
+contain_intexp({Tag, E}) when Tag =:= negative_exp;
+			      Tag =:= log_exp;     
+			      Tag =:= exp_exp;
+			      Tag =:= sin_exp;
+			      Tag =:= cos_exp ->
+    contain_intexp(E).
     
 
 pow(A, B) when is_integer(A), is_integer(B) ->
@@ -87,6 +102,31 @@ pow(A, B) when is_integer(A), is_integer(B) ->
     end;
 pow(A, B) ->
     math:pow(A, B).    
+
+
+
+% linear(x^2, x^2/2)
+strip_const({binop_exp, Op, E1, {number, _}}) when Op =:= '+';
+						   Op =:= '-' ->
+    strip_const(E1);
+strip_const({binop_exp, '/', E1, {number, N}}) ->
+    {binop_exp, '*', {number, 1/N}, E1};
+strip_const(E) -> E.
+
+linear(E1, E2) ->
+    linear_internal(strip_const(E1),
+		    strip_const(E2)).
+
+linear_internal(E, E) -> {ok, {number, 1}};
+linear_internal({binop_exp, '*', {number, N}, E},
+		{binop_exp, '*', {number, M}, E}) ->
+    {ok, {number, M/N}};
+linear_internal(E, {binop_exp, '*', {number, M}, E}) ->
+    {ok, {number, M}};
+linear_internal({binop_exp, '*', {number, N}, E}, E) ->
+    {ok, {number, 1/N}};
+linear_internal(_, _) -> fail.
+        
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").

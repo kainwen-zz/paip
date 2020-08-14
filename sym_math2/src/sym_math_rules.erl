@@ -46,7 +46,9 @@ check_and_apply_rule({Pattern, Response, Guard}, Exp) ->
 	fail ->
 	    fail;
 	{ok, Bindings} ->
-	    {ok, apply_rule(Response, Bindings)}
+	    {ok, apply_rule(Response, Bindings)};
+	{partok, Bindings, AA} ->
+	    {ok, {binop_exp, '*', apply_rule(Response, Bindings), AA}}
     end.
 
 -spec apply_rule(exp(), bindings()) -> exp().
